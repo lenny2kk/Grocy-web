@@ -40,6 +40,7 @@ interface Recipe {
 export const RecipeListContainer: React.FC = () => {
   const { user, userProfile, loading: authLoading, profileError } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [pantryItems, setPantryItems] = useState<{ name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Local operation states
@@ -56,6 +57,23 @@ export const RecipeListContainer: React.FC = () => {
   const [isCopying, setIsCopying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading || !userProfile?.currentFamilyId) return;
+
+    const pantryRef = collection(db, 'families', userProfile.currentFamilyId, 'pantry');
+    const unsubscribe = onSnapshot(pantryRef, (snapshot) => {
+      const list: { name: string }[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ name: docSnap.data().name || '' });
+      });
+      setPantryItems(list);
+    }, (err) => {
+      console.error('Error listening to pantry from RecipeListContainer:', err);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile?.currentFamilyId, authLoading]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -171,10 +189,27 @@ export const RecipeListContainer: React.FC = () => {
         ? collection(db, 'users', user.uid, 'private_shopping_list')
         : collection(db, 'families', userProfile.currentFamilyId, 'family_shopping_list');
 
+      let copiedCount = 0;
+
       for (const ing of activeRecipeForCart.ingredients) {
+        // Porównanie nazwy składnika z produktami w spiżarni (in-memory)
+        const existsInPantry = pantryItems.some(
+          (pantryItem) => pantryItem.name.trim().toLowerCase() === ing.name.trim().toLowerCase()
+        );
+
+        if (existsInPantry) {
+          const confirmAdd = window.confirm(
+            `Produkt '${ing.name}' znajduje się już w Twojej spiżarni. Czy na pewno chcesz dodać go do listy zakupów?`
+          );
+          if (!confirmAdd) {
+            // Pomiń ten produkt
+            continue;
+          }
+        }
+
         const docRef = doc(targetColRef);
         const data: any = {
-          name: ing.name,
+          name: ing.name.trim(),
           quantity: ing.quantity,
           unit: ing.unit,
           checked: false,
@@ -186,15 +221,19 @@ export const RecipeListContainer: React.FC = () => {
         }
 
         batch.set(docRef, data);
+        copiedCount++;
       }
 
-      await batch.commit();
-      
-      setSuccessMsg(
-        `Składniki z przepisu "${activeRecipeForCart.name}" zostały dodane do Twojej listy ${
-          targetList === 'private' ? 'prywatnej' : 'rodzinnej'
-        }!`
-      );
+      if (copiedCount > 0) {
+        await batch.commit();
+        setSuccessMsg(
+          `Składniki z przepisu "${activeRecipeForCart.name}" zostały dodane do Twojej listy ${
+            targetList === 'private' ? 'prywatnej' : 'rodzinnej'
+          } (dodano ${copiedCount} z ${activeRecipeForCart.ingredients.length} składników)!`
+        );
+      } else {
+        setSuccessMsg('Wszystkie składniki z przepisu znajdowały się już w spiżarni i zostały pominięte.');
+      }
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       console.error('Error copying ingredients:', err);

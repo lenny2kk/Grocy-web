@@ -39,6 +39,7 @@ export const ShoppingListContainer: React.FC = () => {
   const { user, userProfile, loading: authLoading, profileError } = useAuth();
   const [activeTab, setActiveTab] = useState<'private' | 'family'>('private');
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [pantryItems, setPantryItems] = useState<{ name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Local operation states
@@ -56,6 +57,23 @@ export const ShoppingListContainer: React.FC = () => {
       ? { ref: collection(db, 'users', user.uid, 'private_shopping_list'), type: 'private' }
       : { ref: collection(db, 'families', userProfile.currentFamilyId, 'family_shopping_list'), type: 'family' };
   };
+
+  useEffect(() => {
+    if (authLoading || !userProfile?.currentFamilyId) return;
+
+    const pantryRef = collection(db, 'families', userProfile.currentFamilyId, 'pantry');
+    const unsubscribe = onSnapshot(pantryRef, (snapshot) => {
+      const list: { name: string }[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ name: docSnap.data().name || '' });
+      });
+      setPantryItems(list);
+    }, (err) => {
+      console.error('Error listening to pantry from ShoppingListContainer:', err);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile?.currentFamilyId, authLoading]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -108,6 +126,21 @@ export const ShoppingListContainer: React.FC = () => {
     if (isNaN(itemQty) || itemQty <= 0) {
       setError('Ilość musi być większa od zera.');
       return;
+    }
+
+    // Sprawdzenie czy produkt jest już w spiżarni (in-memory)
+    const existsInPantry = pantryItems.some(
+      (pantryItem) => pantryItem.name.trim().toLowerCase() === itemName.toLowerCase()
+    );
+
+    if (existsInPantry) {
+      const confirmAdd = window.confirm(
+        `Masz już ten produkt w spiżarni. Czy mimo to chcesz dodać go do listy zakupów?`
+      );
+      if (!confirmAdd) {
+        setName('');
+        return;
+      }
     }
 
     setIsAdding(true);
