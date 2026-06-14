@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth';
 import { 
   doc, 
   setDoc, 
+  getDoc,
   onSnapshot, 
   serverTimestamp
 } from 'firebase/firestore';
@@ -42,39 +43,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
+    let unsubscribeProfile: (() => void) | null = null;
+
     // Listen for auth state changes
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      // Unsubscribe from previous profile listener if exists
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       setUser(currentUser);
       setProfileError(null);
 
       if (currentUser) {
-        // If logged in, set up real-time listener for user profile doc in Firestore
+        setLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfile);
-            setProfileError(null);
-          } else {
-            setUserProfile(null);
-            setProfileError('Profil użytkownika nie istnieje w bazie Firestore.');
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error('Error listening to user profile changes:', error);
-          setProfileError(`Błąd pobierania profilu z Firestore (Permission Denied / Security Rules). Szczegóły: ${error.message}`);
-          setLoading(false);
-        });
 
-        return () => {
-          unsubscribeProfile();
-        };
+        try {
+          // 1. Automatyczny Fallback / Samonaprawa profilu (Zrzut ekranu 2026-06-14 o 17.50.11.jpg)
+          const docSnap = await getDoc(userDocRef);
+          
+          if (!docSnap.exists()) {
+            console.log('Profil nie istnieje w bazie Firestore dla użytkownika, automatyczna naprawa:', currentUser.uid);
+            await setDoc(userDocRef, {
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Użytkownik',
+              currentFamilyId: currentUser.uid, // Domyślnie własne ID jako rodzina prywatna
+              createdAt: serverTimestamp(),
+            });
+            console.log('Profil został pomyślnie utworzony w tle dla użytkownika:', currentUser.uid);
+          }
+
+          // 2. Rejestracja subskrypcji w czasie rzeczywistym
+          unsubscribeProfile = onSnapshot(userDocRef, (profileSnap) => {
+            if (profileSnap.exists()) {
+              setUserProfile(profileSnap.data() as UserProfile);
+              setProfileError(null);
+            } else {
+              setUserProfile(null);
+              setProfileError('Profil użytkownika nie istnieje w bazie Firestore.');
+            }
+            setLoading(false);
+          }, (error) => {
+            console.error('Error listening to user profile changes:', error);
+            setProfileError(`Błąd pobierania profilu z Firestore (Permission Denied / Security Rules). Szczegóły: ${error.message}`);
+            setLoading(false);
+          });
+        } catch (error: any) {
+          console.error('Error in user profile verification/creation flow:', error);
+          setProfileError(`Błąd weryfikacji lub tworzenia profilu w Firestore: ${error.message}`);
+          setLoading(false);
+        }
       } else {
         setUserProfile(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
