@@ -27,6 +27,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  profileError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signOutUser: () => Promise<void>;
@@ -38,11 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     // Listen for auth state changes
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setProfileError(null);
 
       if (currentUser) {
         // If logged in, set up real-time listener for user profile doc in Firestore
@@ -50,12 +53,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             setUserProfile(docSnap.data() as UserProfile);
+            setProfileError(null);
           } else {
             setUserProfile(null);
+            setProfileError('Profil użytkownika nie istnieje w bazie Firestore.');
           }
           setLoading(false);
         }, (error) => {
           console.error('Error listening to user profile changes:', error);
+          setProfileError(`Błąd pobierania profilu z Firestore (Permission Denied / Security Rules). Szczegóły: ${error.message}`);
           setLoading(false);
         });
 
@@ -73,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
+    setProfileError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -83,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, displayName: string) => {
     setLoading(true);
+    setProfileError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
@@ -104,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOutUser = async () => {
     setLoading(true);
+    setProfileError(null);
     try {
       await signOut(auth);
     } catch (error) {
@@ -116,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     userProfile,
     loading,
+    profileError,
     signIn,
     signUp,
     signOutUser,

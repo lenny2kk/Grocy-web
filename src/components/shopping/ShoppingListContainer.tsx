@@ -22,7 +22,8 @@ import {
   ShoppingCart,
   CheckSquare,
   Square,
-  PackageCheck
+  PackageCheck,
+  AlertTriangle
 } from 'lucide-react';
 
 interface ShoppingItem {
@@ -35,12 +36,13 @@ interface ShoppingItem {
 }
 
 export const ShoppingListContainer: React.FC = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading, profileError } = useAuth();
   const [activeTab, setActiveTab] = useState<'private' | 'family'>('private');
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Local operation states
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('szt.');
@@ -56,10 +58,17 @@ export const ShoppingListContainer: React.FC = () => {
   };
 
   useEffect(() => {
+    if (authLoading) return;
+
     const listInfo = getListPath();
-    if (!listInfo) return;
+    if (!listInfo) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
+    setFirestoreError(null);
+
     const q = query(listInfo.ref, orderBy('checked', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -74,11 +83,12 @@ export const ShoppingListContainer: React.FC = () => {
       setLoading(false);
     }, (err) => {
       console.error('Error listening to shopping list:', err);
+      setFirestoreError(`Błąd pobierania listy zakupów (Firestore): ${err.message}`);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [activeTab, userProfile?.currentFamilyId]);
+  }, [activeTab, userProfile?.currentFamilyId, authLoading]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,13 +125,11 @@ export const ShoppingListContainer: React.FC = () => {
       }
 
       await addDoc(listInfo.ref, data);
-
-      // Reset form
       setName('');
       setQuantity('1');
     } catch (err: any) {
       console.error('Error adding to shopping list:', err);
-      setError('Wystąpił błąd podczas dodawania.');
+      setError(`Wystąpił błąd podczas dodawania: ${err.message}`);
     } finally {
       setIsAdding(false);
     }
@@ -212,6 +220,8 @@ export const ShoppingListContainer: React.FC = () => {
     }
   };
 
+  const displayError = profileError || firestoreError;
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Title */}
@@ -246,6 +256,20 @@ export const ShoppingListContainer: React.FC = () => {
         </button>
       </div>
 
+      {/* Firestore or Profile Error Notification */}
+      {displayError && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm animate-fadeIn">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
+          <div>
+            <p className="font-bold text-slate-800">Wykryto błąd bazy danych Firebase</p>
+            <p className="text-xs mt-1 font-mono text-rose-600 break-all">{displayError}</p>
+            <p className="text-xs mt-2 text-slate-500 leading-normal">
+              Upewnij się, że wgrałeś poprawne reguły zabezpieczeń Firestore (Firestore Security Rules) zezwalające zalogowanym użytkownikom na odczyt/zapis w ścieżkach <code>/users/&#123;userId&#125;</code> oraz <code>/families/&#123;familyId&#125;</code>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Grid: Form & List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Form to add */}
@@ -271,14 +295,14 @@ export const ShoppingListContainer: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="np. Chleb, Masło"
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block mb-1">
+                <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block mb-1">
                   Ilość
                 </label>
                 <input
@@ -287,7 +311,7 @@ export const ShoppingListContainer: React.FC = () => {
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   placeholder="1"
-                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                   required
                 />
               </div>
@@ -299,7 +323,7 @@ export const ShoppingListContainer: React.FC = () => {
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all cursor-pointer"
+                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all cursor-pointer"
                 >
                   <option value="szt.">szt.</option>
                   <option value="l">l</option>
@@ -349,8 +373,8 @@ export const ShoppingListContainer: React.FC = () => {
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-300 rounded-2xl text-slate-400 bg-white shadow-sm">
-              <ShoppingCart className="w-8 h-8 mx-auto text-slate-350 mb-2" />
-              <p className="text-sm font-semibold">Brak pozycji na tej liście zakupów.</p>
+              <ShoppingCart className="w-8 h-8 mx-auto text-slate-355 mb-2" />
+              <p className="text-sm font-semibold text-slate-800">Brak pozycji na tej liście zakupów.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -366,7 +390,7 @@ export const ShoppingListContainer: React.FC = () => {
                   <div className="flex items-center gap-3 min-w-0">
                     <button
                       onClick={() => handleToggleCheck(item.id, item.checked)}
-                      className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                      className="text-slate-400 hover:text-indigo-650 transition-colors cursor-pointer shrink-0"
                     >
                       {item.checked ? (
                         <CheckSquare className="w-5 h-5 text-indigo-650" />

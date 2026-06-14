@@ -23,20 +23,30 @@ interface FamilyMember {
 }
 
 export const SettingsContainer: React.FC = () => {
-  const { user, userProfile, signOutUser } = useAuth();
+  const { user, userProfile, profileError, signOutUser } = useAuth();
   const [copiedType, setCopiedType] = useState<'userId' | 'familyId' | null>(null);
   const [familyInputId, setFamilyInputId] = useState('');
+  
+  // Local operation states
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Members list states
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
 
   // Query family members real-time from Firestore /users
   useEffect(() => {
-    if (!user || !userProfile?.currentFamilyId) return;
+    if (!user || !userProfile?.currentFamilyId) {
+      setMembers([]);
+      return;
+    }
 
     setLoadingMembers(true);
+    setMembersError(null);
+
     const q = query(
       collection(db, 'users'),
       where('currentFamilyId', '==', userProfile.currentFamilyId)
@@ -57,18 +67,68 @@ export const SettingsContainer: React.FC = () => {
       setLoadingMembers(false);
     }, (err) => {
       console.error('Error fetching family members:', err);
+      setMembersError(`Błąd pobierania członków rodziny z Firestore: ${err.message}. Sprawdź reguły zabezpieczeń.`);
       setLoadingMembers(false);
     });
 
     return () => unsubscribe();
   }, [user, userProfile?.currentFamilyId]);
 
-  if (!user || !userProfile) return null;
+  // Handle loading and errors for the userProfile state
+  if (!user) return null;
+
+  if (profileError) {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900">Ustawienia & Profil</h2>
+          <p className="text-xs text-slate-500 mt-1">Błąd konfiguracji</p>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center p-6 bg-white border border-rose-200 rounded-3xl shadow-sm text-center space-y-4">
+          <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800">Nie udało się załadować profilu</h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              Firestore zablokował odczyt dokumentu użytkownika. Upewnij się, że w konsoli Firebase włączyłeś bazę Firestore oraz skonfigurowałeś reguły zabezpieczeń na odczyt/zapis.
+            </p>
+          </div>
+          <div className="text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl text-rose-600 break-all max-w-md">
+            {profileError}
+          </div>
+          <button
+            onClick={() => signOutUser()}
+            className="px-4 py-2 font-bold text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+          >
+            Wyloguj się
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900">Ustawienia & Profil</h2>
+          <p className="text-xs text-slate-500 mt-1">Wczytywanie informacji...</p>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center py-16 bg-white border border-slate-200/60 rounded-3xl shadow-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2" />
+          <p className="text-xs font-medium text-slate-500">Pobieranie profilu użytkownika z bazy danych...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCopy = (text: string, type: 'userId' | 'familyId') => {
     navigator.clipboard.writeText(text);
     setCopiedType(type);
-    setTimeout(() => setCopiedType(null), 2050);
+    setTimeout(() => setCopiedType(null), 2000);
   };
 
   const handleJoinFamily = async (e: React.FormEvent) => {
@@ -232,7 +292,7 @@ export const SettingsContainer: React.FC = () => {
               disabled={isLoading}
               className="px-4 py-2 font-bold text-xs text-white rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
               Dołącz
             </button>
           </div>
@@ -250,7 +310,7 @@ export const SettingsContainer: React.FC = () => {
               disabled={isLoading}
               className="w-full py-2.5 font-bold text-xs text-rose-600 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer"
             >
-              Opuść rodzinę i wróć do bazy prywatnej
+              {isLoading ? 'Opuszczanie...' : 'Opuść rodzinę i wróć do bazy prywatnej'}
             </button>
           </div>
         )}
@@ -268,7 +328,12 @@ export const SettingsContainer: React.FC = () => {
           </span>
         </div>
 
-        {loadingMembers ? (
+        {membersError ? (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-50 border border-rose-100 text-rose-600 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{membersError}</span>
+          </div>
+        ) : loadingMembers ? (
           <div className="flex items-center justify-center py-4 text-xs text-slate-500">
             <Loader2 className="w-4 h-4 animate-spin text-emerald-600 mr-2" />
             Wczytywanie członków rodziny...

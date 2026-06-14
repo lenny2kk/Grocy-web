@@ -20,7 +20,8 @@ import {
   PlusCircle,
   X,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 interface Ingredient {
@@ -37,11 +38,12 @@ interface Recipe {
 }
 
 export const RecipeListContainer: React.FC = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading, profileError } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Local operation states
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -56,7 +58,15 @@ export const RecipeListContainer: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userProfile?.currentFamilyId) return;
+    if (authLoading) return;
+
+    if (!userProfile?.currentFamilyId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setFirestoreError(null);
 
     const recipesRef = collection(db, 'families', userProfile.currentFamilyId, 'recipes');
     const q = query(recipesRef, orderBy('createdAt', 'desc'));
@@ -73,11 +83,12 @@ export const RecipeListContainer: React.FC = () => {
       setLoading(false);
     }, (err) => {
       console.error('Error listening to recipes:', err);
+      setFirestoreError(`Błąd pobierania przepisów (Firestore): ${err.message}`);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [userProfile?.currentFamilyId]);
+  }, [userProfile?.currentFamilyId, authLoading]);
 
   const handleAddIngredientRow = () => {
     const ingName = currentIngName.trim();
@@ -131,9 +142,9 @@ export const RecipeListContainer: React.FC = () => {
       setIngredients([]);
       setSuccessMsg('Pomyślnie dodano przepis!');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding recipe:', err);
-      setError('Wystąpił błąd podczas zapisywania przepisu.');
+      setError(`Wystąpił błąd podczas zapisywania przepisu: ${err.message}`);
     }
   };
 
@@ -194,6 +205,8 @@ export const RecipeListContainer: React.FC = () => {
     }
   };
 
+  const displayError = profileError || firestoreError;
+
   return (
     <div className="space-y-6 animate-fadeIn relative">
       {/* Title */}
@@ -216,11 +229,25 @@ export const RecipeListContainer: React.FC = () => {
         </div>
       )}
 
+      {/* Firestore or Profile Error Notification */}
+      {displayError && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm animate-fadeIn">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
+          <div>
+            <p className="font-bold text-slate-800">Wykryto błąd bazy danych Firebase</p>
+            <p className="text-xs mt-1 font-mono text-rose-600 break-all">{displayError}</p>
+            <p className="text-xs mt-2 text-slate-500 leading-normal">
+              Upewnij się, że wgrałeś poprawne reguły zabezpieczeń Firestore (Firestore Security Rules) zezwalające zalogowanym użytkownikom na odczyt/zapis w ścieżkach <code>/users/&#123;userId&#125;</code> oraz <code>/families/&#123;familyId&#125;</code>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Grid: Add Form & List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Form to Add Recipe */}
         <div className="bg-white border border-slate-200/60 rounded-2xl p-5 space-y-4 lg:col-span-1 shadow-sm shadow-slate-100">
-          <div className="flex items-center gap-2 text-indigo-600">
+          <div className="flex items-center gap-2 text-indigo-650">
             <BookOpen className="w-5 h-5" />
             <h3 className="text-sm font-bold text-slate-800">Dodaj Przepis</h3>
           </div>
@@ -235,7 +262,7 @@ export const RecipeListContainer: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="np. Spaghetti Bolognese"
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                 required
               />
             </div>
@@ -249,7 +276,7 @@ export const RecipeListContainer: React.FC = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="np. Ugotuj makaron, dodaj sos..."
                 rows={2}
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all resize-none"
+                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all resize-none"
               />
             </div>
 
@@ -265,7 +292,7 @@ export const RecipeListContainer: React.FC = () => {
                   value={currentIngName}
                   onChange={(e) => setCurrentIngName(e.target.value)}
                   placeholder="Nazwa składnika (np. Makaron)"
-                  className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                  className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                 />
 
                 <div className="grid grid-cols-2 gap-2">
@@ -275,12 +302,12 @@ export const RecipeListContainer: React.FC = () => {
                     value={currentIngQty}
                     onChange={(e) => setCurrentIngQty(e.target.value)}
                     placeholder="Ilość"
-                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                   />
                   <select
                     value={currentIngUnit}
                     onChange={(e) => setCurrentIngUnit(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all cursor-pointer"
+                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all cursor-pointer"
                   >
                     <option value="szt.">szt.</option>
                     <option value="l">l</option>
@@ -293,7 +320,7 @@ export const RecipeListContainer: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAddIngredientRow}
-                  className="w-full py-1.5 flex justify-center items-center gap-1 bg-slate-55 border border-slate-200 text-indigo-600 hover:bg-slate-100 rounded-lg text-xs font-bold cursor-pointer"
+                  className="w-full py-1.5 flex justify-center items-center gap-1 bg-slate-55 border border-slate-200 text-indigo-605 hover:bg-slate-100 rounded-lg text-xs font-bold cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Dodaj składnik
                 </button>
@@ -341,7 +368,7 @@ export const RecipeListContainer: React.FC = () => {
           ) : recipes.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-300 rounded-2xl text-slate-400 bg-white shadow-sm">
               <BookOpen className="w-8 h-8 mx-auto text-slate-355 mb-2" />
-              <p className="text-sm font-semibold">Brak przepisów w bazie.</p>
+              <p className="text-sm font-semibold text-slate-800">Brak przepisów w bazie.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -419,7 +446,7 @@ export const RecipeListContainer: React.FC = () => {
               <button
                 onClick={() => handleMagicCopyIngredients('private')}
                 disabled={isCopying}
-                className="w-full py-3 px-4 flex items-center justify-center gap-2 text-sm font-bold text-slate-750 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 px-4 flex items-center justify-center gap-2 text-sm font-bold text-slate-750 bg-slate-55 border border-slate-200 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
               >
                 Lista Prywatna
               </button>

@@ -33,12 +33,13 @@ interface PantryItem {
 }
 
 export const PantryDashboard: React.FC = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading, profileError } = useAuth();
   const [items, setItems] = useState<PantryItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-
-  // Form states
+  
+  // Local operation states
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('szt.');
@@ -47,52 +48,96 @@ export const PantryDashboard: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    if (!userProfile?.currentFamilyId) return;
+    // If auth is still loading, wait
+    if (authLoading) return;
 
-    const pantryRef = collection(db, 'families', userProfile.currentFamilyId, 'pantry');
-    const q = query(pantryRef, orderBy('name', 'asc'));
+    // If auth completed but profile doesn't exist/can't be fetched
+    if (!userProfile?.currentFamilyId || userProfile.currentFamilyId.trim() === '') {
+      console.error('PantryDashboard: Missing or empty currentFamilyId', userProfile);
+      setFirestoreError('Błąd: Brak przypisanego identyfikatora rodziny (currentFamilyId) w profilu użytkownika. Skonfiguruj grupę w Ustawieniach.');
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const pantryList: PantryItem[] = [];
-      snapshot.forEach((docSnap) => {
-        pantryList.push({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as PantryItem);
+    setLoading(true);
+    setFirestoreError(null);
+
+    // Timeout fallback (5 seconds) to prevent infinite spinner if Firebase hangs
+    const timeoutId = setTimeout(() => {
+      setLoading((currLoading) => {
+        if (currLoading) {
+          console.warn('Pantry list loading timed out. Checking connection or Firestore initialization.');
+          setFirestoreError('Przekroczono limit czasu połączenia z bazą Firestore. Sprawdź połączenie lub konsolę Firebase.');
+          return false;
+        }
+        return currLoading;
       });
-      setItems(pantryList);
-      setLoading(false);
-    }, (err) => {
-      console.error('Error listening to pantry:', err);
-      setLoading(false);
-    });
+    }, 5000);
 
-    return () => unsubscribe();
-  }, [userProfile?.currentFamilyId]);
+    let unsubscribe = () => {};
 
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!userProfile?.currentFamilyId) return;
-
-    const itemName = name.trim();
-    const itemQty = parseFloat(quantity);
-    const itemMinQty = parseFloat(minQuantity);
-
-    if (!itemName) {
-      setError('Nazwa produktu jest wymagana.');
-      return;
-    }
-
-    if (isNaN(itemQty) || itemQty < 0) {
-      setError('Ilość musi być liczbą nieujemną.');
-      return;
-    }
-
-    setIsAdding(true);
     try {
       const pantryRef = collection(db, 'families', userProfile.currentFamilyId, 'pantry');
+      const q = query(pantryRef, orderBy('name', 'asc'));
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        clearTimeout(timeoutId);
+        const pantryList: PantryItem[] = [];
+        snapshot.forEach((docSnap) => {
+          pantryList.push({
+            id: docSnap.id,
+            ...docSnap.data()
+          } as PantryItem);
+        });
+        setItems(pantryList);
+        setLoading(false);
+      }, (err) => {
+        clearTimeout(timeoutId);
+        console.error('Firestore onSnapshot error in PantryDashboard:', err);
+        setFirestoreError(`Błąd pobierania danych ze spiżarni (Firestore): ${err.message}`);
+        setLoading(false);
+      });
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error('Synchronous error setting up pantry subscription:', err);
+      setFirestoreError(`Błąd inicjalizacji połączenia z Firestore: ${err.message}`);
+      setLoading(false);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [userProfile?.currentFamilyId, authLoading]);
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsAdding(true);
+    setLoading(true); // Ensure main loader or add loader is set while adding
+
+    try {
+      const familyId = userProfile?.currentFamilyId;
+      
+      // 2. Walidacja currentFamilyId przed wykonaniem addDoc/setDoc
+      if (!familyId || familyId.trim() === '') {
+        throw new Error('Brak przypisanego identyfikatora rodziny (currentFamilyId). Zarejestruj się ponownie lub dołącz do rodziny w zakładce Ustawienia.');
+      }
+
+      const itemName = name.trim();
+      const itemQty = parseFloat(quantity);
+      const itemMinQty = parseFloat(minQuantity);
+
+      if (!itemName) {
+        throw new Error('Nazwa produktu jest wymagana.');
+      }
+
+      if (isNaN(itemQty) || itemQty < 0) {
+        throw new Error('Ilość musi być liczbą nieujemną.');
+      }
+
+      // Dane trafiają pod poprawną ścieżkę /families/${currentFamilyId}/pantry
+      const pantryRef = collection(db, 'families', familyId, 'pantry');
       await addDoc(pantryRef, {
         name: itemName,
         quantity: itemQty,
@@ -100,15 +145,18 @@ export const PantryDashboard: React.FC = () => {
         minQuantity: isNaN(itemMinQty) ? 0 : itemMinQty,
       });
 
-      // Reset form
       setName('');
       setQuantity('1');
       setMinQuantity('0');
     } catch (err: any) {
-      console.error('Error adding to pantry:', err);
-      setError('Wystąpił błąd podczas dodawania do spiżarni.');
+      // 1. Wyświetl błąd w konsoli (widoczny np. w Safari Inspection)
+      console.error('Error adding product in handleCreateProduct:', err);
+      // Rzuć błąd w stanie aplikacji
+      setError(`Wystąpił błąd podczas dodawania do spiżarni: ${err.message}`);
     } finally {
+      // 1. Zresetuj stan ładowania w bloku finally
       setIsAdding(false);
+      setLoading(false);
     }
   };
 
@@ -121,8 +169,9 @@ export const PantryDashboard: React.FC = () => {
       await updateDoc(itemRef, {
         quantity: newQty
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating quantity:', err);
+      alert(`Nie udało się zmienić ilości: ${err.message}`);
     }
   };
 
@@ -133,8 +182,9 @@ export const PantryDashboard: React.FC = () => {
     try {
       const itemRef = doc(db, 'families', userProfile.currentFamilyId, 'pantry', itemId);
       await deleteDoc(itemRef);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting item:', err);
+      alert(`Nie udało się usunąć produktu: ${err.message}`);
     }
   };
 
@@ -164,6 +214,8 @@ export const PantryDashboard: React.FC = () => {
     item.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const displayError = profileError || firestoreError;
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Title & Search bar */}
@@ -188,6 +240,20 @@ export const PantryDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Firestore or Profile Error Notification */}
+      {displayError && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm animate-fadeIn">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
+          <div>
+            <p className="font-bold text-slate-800">Błąd bazy danych Firebase</p>
+            <p className="text-xs mt-1 font-mono text-rose-600 break-all">{displayError}</p>
+            <p className="text-xs mt-2 text-slate-500 leading-normal">
+              Upewnij się, że wgrałeś poprawne reguły zabezpieczeń Firestore (Firestore Security Rules) w konsoli Firebase. Stworzyłem dla Ciebie plik <code>firestore.rules</code> w głównym katalogu projektu z gotowymi regułami do skopiowania.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Grid: Form & List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Add Product Form */}
@@ -203,7 +269,7 @@ export const PantryDashboard: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleAddItem} className="space-y-3">
+          <form onSubmit={handleCreateProduct} className="space-y-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Nazwa Produktu
@@ -220,7 +286,7 @@ export const PantryDashboard: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block mb-1">
+                <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block mb-1">
                   Ilość
                 </label>
                 <input
@@ -286,8 +352,8 @@ export const PantryDashboard: React.FC = () => {
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-300 rounded-2xl text-slate-400 bg-white shadow-sm">
               <Layers className="w-8 h-8 mx-auto text-slate-350 mb-2" />
-              <p className="text-sm font-semibold">Brak produktów w spiżarni.</p>
-              {search && <p className="text-xs text-slate-400 mt-1">Spróbuj zmienić zapytanie wyszukiwania.</p>}
+              <p className="text-sm font-semibold text-slate-800">Twoja spiżarnia jest pusta.</p>
+              <p className="text-xs text-slate-500 mt-1">Dodaj pierwszy produkt, korzystając z formularza obok!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -329,7 +395,7 @@ export const PantryDashboard: React.FC = () => {
                       <span className="text-sm font-bold text-slate-600">
                         Stan: <span className="text-slate-900 font-extrabold">{item.quantity}</span> {item.unit}
                       </span>
-                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+                      <div className="flex items-center gap-1 bg-slate-55 border border-slate-200 rounded-xl p-0.5">
                         <button
                           onClick={() => handleUpdateQty(item.id, item.quantity, -1)}
                           className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
