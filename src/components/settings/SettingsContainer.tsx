@@ -284,7 +284,7 @@ export const SettingsContainer: React.FC = () => {
               onChange={(e) => setFamilyInputId(e.target.value)}
               placeholder="Wklej ID innego użytkownika"
               disabled={isLoading}
-              className="flex-grow pl-3 pr-3 py-2.5 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all disabled:opacity-50"
+              className="flex-grow pl-3 pr-3 py-2 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all disabled:opacity-50"
               required
             />
             <button

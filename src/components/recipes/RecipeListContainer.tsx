@@ -301,7 +301,7 @@ export const RecipeListContainer: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="np. Spaghetti Bolognese"
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
+                className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                 required
               />
             </div>
@@ -315,7 +315,7 @@ export const RecipeListContainer: React.FC = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="np. Ugotuj makaron, dodaj sos..."
                 rows={2}
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all resize-none"
+                className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all resize-none"
               />
             </div>
 
@@ -331,7 +331,7 @@ export const RecipeListContainer: React.FC = () => {
                   value={currentIngName}
                   onChange={(e) => setCurrentIngName(e.target.value)}
                   placeholder="Nazwa składnika (np. Makaron)"
-                  className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
+                  className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                 />
 
                 <div className="grid grid-cols-2 gap-2">
@@ -341,12 +341,12 @@ export const RecipeListContainer: React.FC = () => {
                     value={currentIngQty}
                     onChange={(e) => setCurrentIngQty(e.target.value)}
                     placeholder="Ilość"
-                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
+                    className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all"
                   />
                   <select
                     value={currentIngUnit}
                     onChange={(e) => setCurrentIngUnit(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all cursor-pointer"
+                    className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-655 transition-all cursor-pointer"
                   >
                     <option value="szt.">szt.</option>
                     <option value="l">l</option>

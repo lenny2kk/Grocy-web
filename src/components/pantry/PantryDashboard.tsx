@@ -235,7 +235,7 @@ export const PantryDashboard: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Szukaj produktu..."
-            className="w-full sm:w-64 pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition-all shadow-sm shadow-slate-100/40"
+            className="w-full sm:w-64 pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-base text-slate-950 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-650 transition-all shadow-sm shadow-slate-100/40"
           />
         </div>
       </div>
@@ -279,11 +279,11 @@ export const PantryDashboard: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="np. Mleko, Ryż"
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 placeholder:text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
                 required
               />
             </div>
-
+ 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block mb-1">
@@ -295,11 +295,11 @@ export const PantryDashboard: React.FC = () => {
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   placeholder="1"
-                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                  className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
                   required
                 />
               </div>
-
+ 
               <div>
                 <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block mb-1">
                   Jednostka
@@ -307,7 +307,7 @@ export const PantryDashboard: React.FC = () => {
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all cursor-pointer"
+                  className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all cursor-pointer"
                 >
                   <option value="szt.">szt.</option>
                   <option value="l">l</option>
@@ -317,9 +317,9 @@ export const PantryDashboard: React.FC = () => {
                 </select>
               </div>
             </div>
-
+ 
             <div>
-              <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block mb-1">
+              <label className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block mb-1">
                 Minimalna Ilość (Ostrzeżenie)
               </label>
               <input
@@ -328,7 +328,7 @@ export const PantryDashboard: React.FC = () => {
                 value={minQuantity}
                 onChange={(e) => setMinQuantity(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 text-sm bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
+                className="w-full px-3 py-1.5 text-base bg-slate-55 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-650 transition-all"
               />
             </div>
 
