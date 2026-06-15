@@ -63,27 +63,40 @@ function App() {
           </AuthLayout>
         )}
       </>
-    );
-  }
-
-  // Render current tab component
+   // Render current tab component
   const renderContent = () => {
     switch (activeTab) {
       case 'pantry':
-        return <PantryDashboard />;
+        return (
+          <div className="flex-1 overflow-y-auto overscroll-contain pb-32 md:pb-8">
+            <PantryDashboard />
+          </div>
+        );
       case 'shopping':
         return <ShoppingListContainer />;
       case 'recipes':
-        return <RecipeListContainer />;
+        return (
+          <div className="flex-1 overflow-y-auto overscroll-contain pb-32 md:pb-8">
+            <RecipeListContainer />
+          </div>
+        );
       case 'settings':
-        return <SettingsContainer />;
+        return (
+          <div className="flex-1 overflow-y-auto overscroll-contain pb-32 md:pb-8">
+            <SettingsContainer />
+          </div>
+        );
       default:
-        return <PantryDashboard />;
+        return (
+          <div className="flex-1 overflow-y-auto overscroll-contain pb-32 md:pb-8">
+            <PantryDashboard />
+          </div>
+        );
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-24 sm:pb-0 overflow-x-hidden">
+    <div className="relative h-screen h-[100dvh] bg-slate-50 text-slate-900 flex flex-col overflow-hidden">
       {/* Background lights */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/5 blur-[120px] pointer-events-none" />
@@ -92,7 +105,7 @@ function App() {
       <header className="z-50 border-b border-slate-200/60 bg-white/95 backdrop-blur-md sticky top-0 px-4 py-4 sm:px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
+            <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650">
               <Refrigerator className="w-5 h-5" />
             </div>
             <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
@@ -151,7 +164,7 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main className="z-10 flex-grow max-w-5xl w-full mx-auto px-4 py-6 sm:py-8">
+      <main className="z-10 flex-grow max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 overflow-hidden min-h-0 flex flex-col">
         {renderContent()}
       </main>
 
