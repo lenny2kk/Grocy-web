@@ -63,7 +63,10 @@ function App() {
           </AuthLayout>
         )}
       </>
-   // Render current tab component
+    );
+  }
+
+  // Render current tab component
   const renderContent = () => {
     switch (activeTab) {
       case 'pantry':
