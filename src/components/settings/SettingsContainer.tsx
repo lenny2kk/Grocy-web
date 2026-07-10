@@ -155,9 +155,10 @@ export const SettingsContainer: React.FC = () => {
       });
       setSuccess(`Pomyślnie dołączono do rodziny o ID: ${targetFamilyId}`);
       setFamilyInputId('');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error joining family:', err);
-      setError(err.message || 'Wystąpił błąd podczas dołączania do rodziny.');
+      const message = err instanceof Error ? err.message : 'Wystąpił błąd podczas dołączania do rodziny.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +174,7 @@ export const SettingsContainer: React.FC = () => {
         currentFamilyId: user.uid
       });
       setSuccess('Powrócono do prywatnego konta.');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error leaving family:', err);
       setError('Wystąpił błąd podczas opuszczania rodziny.');
     } finally {

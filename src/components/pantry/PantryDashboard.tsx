@@ -97,10 +97,11 @@ export const PantryDashboard: React.FC = () => {
         setFirestoreError(`Błąd pobierania danych ze spiżarni (Firestore): ${err.message}`);
         setLoading(false);
       });
-    } catch (err: any) {
+    } catch (err) {
       clearTimeout(timeoutId);
       console.error('Synchronous error setting up pantry subscription:', err);
-      setFirestoreError(`Błąd inicjalizacji połączenia z Firestore: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setFirestoreError(`Błąd inicjalizacji połączenia z Firestore: ${message}`);
       setLoading(false);
     }
 
@@ -148,11 +149,10 @@ export const PantryDashboard: React.FC = () => {
       setName('');
       setQuantity('1');
       setMinQuantity('0');
-    } catch (err: any) {
-      // 1. Wyświetl błąd w konsoli (widoczny np. w Safari Inspection)
+    } catch (err) {
       console.error('Error adding product in handleCreateProduct:', err);
-      // Rzuć błąd w stanie aplikacji
-      setError(`Wystąpił błąd podczas dodawania do spiżarni: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Wystąpił błąd podczas dodawania do spiżarni: ${message}`);
     } finally {
       // 1. Zresetuj stan ładowania w bloku finally
       setIsAdding(false);
@@ -169,9 +169,10 @@ export const PantryDashboard: React.FC = () => {
       await updateDoc(itemRef, {
         quantity: newQty
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating quantity:', err);
-      alert(`Nie udało się zmienić ilości: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Nie udało się zmienić ilości: ${message}`);
     }
   };
 
@@ -182,9 +183,10 @@ export const PantryDashboard: React.FC = () => {
     try {
       const itemRef = doc(db, 'families', userProfile.currentFamilyId, 'pantry', itemId);
       await deleteDoc(itemRef);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error deleting item:', err);
-      alert(`Nie udało się usunąć produktu: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Nie udało się usunąć produktu: ${message}`);
     }
   };
 

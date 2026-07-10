@@ -37,9 +37,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     setIsLoading(true);
     try {
       await signUp(email, password, displayName);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Registration error:', err);
-      switch (err.code) {
+      const firebaseError = err as { code?: string; message?: string };
+      switch (firebaseError.code) {
         case 'auth/email-already-in-use':
           setError('Ten adres e-mail jest już zajęty.');
           break;

@@ -145,24 +145,22 @@ export const ShoppingListContainer: React.FC = () => {
 
     setIsAdding(true);
     try {
-      const data: any = {
+      const data = {
         name: itemName,
         quantity: itemQty,
         unit: unit,
         checked: false,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        ...(listInfo.type === 'family' ? { addedBy: userProfile.displayName || 'Członek rodziny' } : {})
       };
-
-      if (listInfo.type === 'family') {
-        data.addedBy = userProfile.displayName || 'Członek rodziny';
-      }
 
       await addDoc(listInfo.ref, data);
       setName('');
       setQuantity('1');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding to shopping list:', err);
-      setError(`Wystąpił błąd podczas dodawania: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Wystąpił błąd podczas dodawania: ${message}`);
     } finally {
       setIsAdding(false);
     }

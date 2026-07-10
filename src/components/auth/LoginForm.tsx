@@ -25,9 +25,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
     setIsLoading(true);
     try {
       await signIn(email, password);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Login error:', err);
-      switch (err.code) {
+      const firebaseError = err as { code?: string; message?: string };
+      switch (firebaseError.code) {
         case 'auth/invalid-email':
           setError('Niepoprawny format adresu e-mail.');
           break;

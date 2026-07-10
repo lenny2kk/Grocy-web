@@ -91,9 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfileError(`Błąd pobierania profilu z Firestore (Permission Denied / Security Rules). Szczegóły: ${error.message}`);
             setLoading(false);
           });
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error in user profile verification/creation flow:', error);
-          setProfileError(`Błąd weryfikacji lub tworzenia profilu w Firestore: ${error.message}`);
+          const message = error instanceof Error ? error.message : String(error);
+          setProfileError(`Błąd weryfikacji lub tworzenia profilu w Firestore: ${message}`);
           setLoading(false);
         }
       } else {

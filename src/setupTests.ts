@@ -1,5 +1,26 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import type { User } from 'firebase/auth';
+
+declare global {
+  var triggerAuthStateChange: ((user: User | null) => void) | undefined;
+  var triggerSnapshot: ((pathOrData: any, data?: any) => void) | undefined;
+  var triggerSnapshotError: ((err: any) => void) | undefined;
+  var firebaseMocks: {
+    auth: { currentUser: User | null };
+    onAuthStateChanged: ReturnType<typeof vi.fn>;
+    doc: ReturnType<typeof vi.fn>;
+    collection: ReturnType<typeof vi.fn>;
+    getDoc: ReturnType<typeof vi.fn>;
+    getDocs: ReturnType<typeof vi.fn>;
+    setDoc: ReturnType<typeof vi.fn>;
+    addDoc: ReturnType<typeof vi.fn>;
+    updateDoc: ReturnType<typeof vi.fn>;
+    deleteDoc: ReturnType<typeof vi.fn>;
+    onSnapshot: ReturnType<typeof vi.fn>;
+    writeBatch: ReturnType<typeof vi.fn>;
+  };
+}
 
 // --- FIREBASE AUTH MOCKS ---
 const mockAuth = {
@@ -8,7 +29,7 @@ const mockAuth = {
 
 const mockOnAuthStateChanged = vi.fn((_authInstance, callback) => {
   // Save callback to call it manually in tests if needed
-  (globalThis as any).triggerAuthStateChange = callback;
+  globalThis.triggerAuthStateChange = callback;
   return () => {};
 });
 
@@ -47,7 +68,7 @@ const mockSetDoc = vi.fn();
 const mockAddDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockDeleteDoc = vi.fn();
-const snapshotListeners = new Map<string, any>();
+const snapshotListeners = new Map<string, Function>();
 
 const mockOnSnapshot = vi.fn((q, onNext, onError) => {
   const path = q?.path || '';
@@ -55,7 +76,7 @@ const mockOnSnapshot = vi.fn((q, onNext, onError) => {
     snapshotListeners.set(path, onNext);
   }
 
-  (globalThis as any).triggerSnapshot = (pathOrData: any, data?: any) => {
+  globalThis.triggerSnapshot = (pathOrData: any, data?: any) => {
     if (data === undefined) {
       const allListeners = Array.from(snapshotListeners.values());
       if (allListeners.length > 0) {
@@ -73,7 +94,7 @@ const mockOnSnapshot = vi.fn((q, onNext, onError) => {
     }
   };
 
-  (globalThis as any).triggerSnapshotError = (err: any) => {
+  globalThis.triggerSnapshotError = (err: any) => {
     if (onError) onError(err);
   };
 
@@ -112,7 +133,7 @@ vi.mock('firebase/firestore', () => {
 });
 
 // Export mock references for easy access/manipulation in tests
-(globalThis as any).firebaseMocks = {
+globalThis.firebaseMocks = {
   auth: mockAuth,
   onAuthStateChanged: mockOnAuthStateChanged,
   doc: mockDoc,

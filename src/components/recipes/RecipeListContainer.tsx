@@ -160,9 +160,10 @@ export const RecipeListContainer: React.FC = () => {
       setIngredients([]);
       setSuccessMsg('Pomyślnie dodano przepis!');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding recipe:', err);
-      setError(`Wystąpił błąd podczas zapisywania przepisu: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Wystąpił błąd podczas zapisywania przepisu: ${message}`);
     }
   };
 
@@ -208,17 +209,14 @@ export const RecipeListContainer: React.FC = () => {
         }
 
         const docRef = doc(targetColRef);
-        const data: any = {
+        const data = {
           name: ing.name.trim(),
           quantity: ing.quantity,
           unit: ing.unit,
           checked: false,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          ...(targetList === 'family' ? { addedBy: userProfile.displayName || 'Członek rodziny' } : {})
         };
-
-        if (targetList === 'family') {
-          data.addedBy = userProfile.displayName || 'Członek rodziny';
-        }
 
         batch.set(docRef, data);
         copiedCount++;
