@@ -4,8 +4,8 @@ import type { User } from 'firebase/auth';
 
 declare global {
   var triggerAuthStateChange: ((user: User | null) => void) | undefined;
-  var triggerSnapshot: ((pathOrData: any, data?: any) => void) | undefined;
-  var triggerSnapshotError: ((err: any) => void) | undefined;
+  var triggerSnapshot: ((pathOrData: unknown, data?: unknown) => void) | undefined;
+  var triggerSnapshotError: ((err: unknown) => void) | undefined;
   var firebaseMocks: {
     auth: { currentUser: User | null };
     onAuthStateChanged: ReturnType<typeof vi.fn>;
@@ -68,7 +68,7 @@ const mockSetDoc = vi.fn();
 const mockAddDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockDeleteDoc = vi.fn();
-const snapshotListeners = new Map<string, Function>();
+const snapshotListeners = new Map<string, (data: any) => void>(); // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const mockOnSnapshot = vi.fn((q, onNext, onError) => {
   const path = q?.path || '';
@@ -76,7 +76,7 @@ const mockOnSnapshot = vi.fn((q, onNext, onError) => {
     snapshotListeners.set(path, onNext);
   }
 
-  globalThis.triggerSnapshot = (pathOrData: any, data?: any) => {
+  globalThis.triggerSnapshot = (pathOrData: unknown, data?: unknown) => {
     if (data === undefined) {
       const allListeners = Array.from(snapshotListeners.values());
       if (allListeners.length > 0) {
@@ -85,7 +85,7 @@ const mockOnSnapshot = vi.fn((q, onNext, onError) => {
       return;
     }
     
-    const pathQuery = pathOrData;
+    const pathQuery = pathOrData as string;
     for (const [key, value] of snapshotListeners.entries()) {
       if (key.includes(pathQuery)) {
         value(data);
@@ -94,7 +94,7 @@ const mockOnSnapshot = vi.fn((q, onNext, onError) => {
     }
   };
 
-  globalThis.triggerSnapshotError = (err: any) => {
+  globalThis.triggerSnapshotError = (err: unknown) => {
     if (onError) onError(err);
   };
 

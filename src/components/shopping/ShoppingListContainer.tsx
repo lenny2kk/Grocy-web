@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -254,7 +255,7 @@ export const ShoppingListContainer: React.FC = () => {
   const displayError = profileError || firestoreError;
 
   return (
-    <div className="space-y-6 animate-fadeIn h-full flex flex-col overflow-hidden">
+    <div className="space-y-6 animate-fadeIn h-full overflow-y-auto scrolling-touch pr-1">
       {/* Title */}
       <div className="shrink-0">
         <h2 className="text-xl font-extrabold text-slate-900">Lista Zakupów</h2>
@@ -302,7 +303,7 @@ export const ShoppingListContainer: React.FC = () => {
       )}
 
       {/* Grid: Form & List */}
-      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
         {/* Form to add */}
         <div className="bg-white border border-slate-200/60 rounded-2xl p-5 space-y-4 lg:col-span-1 shadow-sm shadow-slate-100 shrink-0">
           <div className="flex items-center gap-2 text-indigo-600">
@@ -376,7 +377,7 @@ export const ShoppingListContainer: React.FC = () => {
         </div>
 
         {/* Items List */}
-        <div className="lg:col-span-2 space-y-4 flex flex-col h-full overflow-hidden min-h-0">
+        <div className="lg:col-span-2 space-y-4">
           {items.some(i => i.checked) && (
             <button
               onClick={handleCheckoutCheckedItems}
@@ -397,7 +398,7 @@ export const ShoppingListContainer: React.FC = () => {
             </button>
           )}
 
-          <div className="flex-1 overflow-y-auto overscroll-contain pb-[calc(theme(spacing.24)+env(safe-area-inset-bottom))] md:pb-8 pr-1">
+          <div className="pb-[calc(theme(spacing.24)+env(safe-area-inset-bottom))] md:pb-8">
             {loading ? (
               <div className="flex justify-center items-center py-12 text-slate-500">
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mr-2" />

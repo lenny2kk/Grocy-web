@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -66,8 +67,8 @@ export const PantryDashboard: React.FC = () => {
     const timeoutId = setTimeout(() => {
       setLoading((currLoading) => {
         if (currLoading) {
-          console.warn('Pantry list loading timed out. Checking connection or Firestore initialization.');
-          setFirestoreError('Przekroczono limit czasu połączenia z bazą Firestore. Sprawdź połączenie lub konsolę Firebase.');
+          console.warn('PantryDashboard subscription loading timeout exceeded.');
+          setFirestoreError('Przekroczono limit czasu oczekiwania na połączenie. Spróbuj odświeżyć stronę.');
           return false;
         }
         return currLoading;
@@ -78,6 +79,7 @@ export const PantryDashboard: React.FC = () => {
 
     try {
       const pantryRef = collection(db, 'families', userProfile.currentFamilyId, 'pantry');
+      // Zapytanie posortowane alfabetycznie
       const q = query(pantryRef, orderBy('name', 'asc'));
 
       unsubscribe = onSnapshot(q, (snapshot) => {
